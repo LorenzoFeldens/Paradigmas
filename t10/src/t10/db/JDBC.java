@@ -1,125 +1,240 @@
-package t10.db;
+package t10.DB;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import t10.Posto;
 import t10.Preco;
 
 public class JDBC {
-   static final String JDBC_DRIVER = "org.hsqldb.jdbcDriver";
-   static String db_name;
-   static String db_url;// = "jdbc:hsqldb:file:" + DB_NAME;
-   static final String DB_USER = "sa";
-   static final String DB_PASSWD = "";
+    private String jdbc_driver = "org.hsqldb.jdbcDriver";
+    private String db_name = "postosdb";
+    private String db_preurl = "jdbc:hsqldb:file:";
+    private String db_url =  db_preurl + db_name;
+    private String db_user = "sa";
+    private String db_passwd = "";
+    private String tab_postos = "posto";
+    private String tab_precos = "preco";
+    private String[] col_postos = {"nomefantasia","bandeira",
+        "razaosocial","cnpj","endereco","bairro","cep","imagem"};
+    private String[] col_precos = {"idpreco","tipo","valor","data","cnpj"};
+    
+    private ArrayList selectPostos() throws ClassNotFoundException, SQLException {
+        ArrayList lista = new ArrayList<>();
+       
+        Class.forName(jdbc_driver);
+        Connection c = DriverManager.getConnection(db_url, db_user, db_passwd);
+        Statement s = c.createStatement(); 
 
-    public JDBC(String nome) {
-        db_name = nome;
-        db_url = "jdbc:hsqldb:file:" + db_name;
+        ResultSet rs;
+        rs = s.executeQuery("SELECT * FROM "+tab_postos);
+        while (rs.next())
+            lista.add(new Posto(rs.getString(col_postos[0]), rs.getString(col_postos[1]),
+            rs.getString(col_postos[2]), rs.getString(col_postos[3]), 
+            rs.getString(col_postos[4]), rs.getString(col_postos[5]), 
+            rs.getString(col_postos[6]), rs.getString(col_postos[7])));
+ 
+        s.execute("SHUTDOWN");
+        s.close();
+        c.close();
+      
+        return lista;
+    }
+    
+    private ArrayList selectPrecos(String cnpj) throws ClassNotFoundException, SQLException {
+        ArrayList lista = new ArrayList<>();
+       
+        Class.forName(jdbc_driver);
+        Connection c = DriverManager.getConnection(db_url, db_user, db_passwd);
+        Statement s = c.createStatement(); 
+      
+        ResultSet rs;
+        rs = s.executeQuery("SELECT * FROM "+tab_precos+" WHERE "+col_postos[3]+" = '"+cnpj+"'");
+        while (rs.next())
+            lista.add(new Preco(rs.getString(col_precos[1]),
+            rs.getString(col_precos[2]), rs.getString(col_precos[3])));
+ 
+        s.execute("SHUTDOWN");
+        s.close();
+        c.close();
+      
+        return lista;
+    }
+    
+    public ArrayList getPostos (){
+        ArrayList p = null;
+        
+        try {
+            p = selectPostos();
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(JDBC.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return p;
+    }
+    
+    public ArrayList getPrecos(String cnpj){
+        ArrayList p = null;
+        
+        try {
+            p = selectPrecos(cnpj);
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(JDBC.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return p;
+    }
+    
+    private void deleteDados() throws ClassNotFoundException, SQLException {
+        Class.forName(jdbc_driver);
+        Connection c = DriverManager.getConnection(db_url, db_user, db_passwd);
+        Statement s = c.createStatement();
+      
+        s.executeUpdate("DELETE FROM "+tab_precos);
+        s.executeUpdate("DELETE FROM "+tab_postos);
+      
+        s.execute("SHUTDOWN");
+        s.close();
+        c.close();
+    }
+    
+    private void insertPosto(String nomeFantasia, String bandeira, 
+        String razaoSocial, String cnpj, String endereco, String bairro, String cep, 
+        String img) throws ClassNotFoundException, SQLException{
+       
+        Class.forName(jdbc_driver);
+        Connection c = DriverManager.getConnection(db_url, db_user, db_passwd);
+        Statement s = c.createStatement();
+      
+        String str = "INSERT INTO "+tab_postos+" VALUES ('"+nomeFantasia
+            +"', '"+bandeira+"', '"+razaoSocial+"', '"+cnpj+"', '"+endereco+"', '"+bairro
+            +"', '"+cep+"', '"+img+"')";
+        s.executeUpdate(str);
+      
+        s.execute("SHUTDOWN");
+        s.close();
+        c.close();
     }
    
-   
-
-   public ArrayList getPostos() throws ClassNotFoundException, SQLException {
-      ArrayList lista = new ArrayList<Posto>();
+    private void insertPreco(String tipo, String valor, String data, String cnpj) 
+        throws ClassNotFoundException, SQLException{
        
-      Class.forName(JDBC_DRIVER);
-
-      Connection c = DriverManager.getConnection(db_url,
-                                                 DB_USER,
-                                                 DB_PASSWD);
-
-      Statement s = c.createStatement();
-//      s.executeUpdate("CREATE TABLE posto (idposto INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL, "
-//        + "nomefantasia VARCHAR(255), bandeira VARCHAR(255), razaosocial VARCHAR(255), "
-//        + "cnpj VARCHAR(255), endereco VARCHAR(255), bairro VARCHAR(255), cep VARCHAR(255), "
-//        + "imagem VARCHAR(255), maps VARCHAR(255), PRIMARY KEY(idposto))");
-//      
-//      s.executeUpdate("CREATE TABLE preco (idpreco INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL , "
-//        + "tipo VARCHAR(255), valor VARCHAR(255), data VARCHAR(255), idposto INTEGER, "
-//        + "PRIMARY KEY(idpreco), FOREIGN KEY (idposto) REFERENCES posto (idposto));");
-//      
-//      s.executeUpdate("INSERT INTO posto (nomefantasia, bandeira, razaosocial, cnpj,"
-//        + "endereco, bairro, cep, imagem, maps) VALUES('Posto Hubner', 'Ipiranga', "
-//        + "'Posto 01', '11111111111', 'Avenida João Luiz Pozzobon, 2145, Km 3', "
-//        + "'Nossa Senhora das Dores', '97095-465', 'postohubner.jpg', "
-//        + "'https://goo.gl/maps/PB3owpXAikB2')");
-//      s.executeUpdate("INSERT INTO posto (nomefantasia, bandeira, razaosocial, cnpj,"
-//        + "endereco, bairro, cep, imagem, maps) VALUES('Posto Camobi II', 'Ipiranga', "
-//        + "'Posto 02', '22222222222', 'RS-509, Km 9', 'Camobi', '97095-000', "
-//        + "'postocamobiii.jpg', 'https://goo.gl/maps/9KSBVYDQ87t')");
-//      s.executeUpdate("INSERT INTO posto (nomefantasia, bandeira, razaosocial, cnpj,"
-//        + "endereco, bairro, cep, imagem, maps) VALUES('Auto Posto Shell', 'Shell', "
-//        + "'Posto 03', '33333333333', 'BR-158, Km 3', 'Nossa Senhora das Dores', "
-//        + "'97095-460', 'autopostoshell.jpg', 'https://goo.gl/maps/xnS9CCadPq32')");
-//      s.executeUpdate("INSERT INTO posto (nomefantasia, bandeira, razaosocial, cnpj,"
-//        + "endereco, bairro, cep, imagem, maps) VALUES('Posto BR', 'Petrobras', "
-//        + "'Posto 04', '44444444444', 'Av. Pref. Evandro Behr, 6705', 'Camobi', "
-//        + "'97110-640', 'postobr.jpg', 'https://goo.gl/maps/85ie4gAZmis')");
-//      s.executeUpdate("INSERT INTO posto (nomefantasia, bandeira, razaosocial, cnpj,"
-//        + "endereco, bairro, cep, imagem, maps) VALUES('Posto Petrobras', 'Petrobras', "
-//        + "'Posto 05', '55555555555', 'R. Pinheiro Machado, 2300', 'Centro', "
-//        + "'97050-600', 'postopetrobras.jpg', 'https://goo.gl/maps/3KuG7ku3HP42')");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Gasolina', '3.31', '21/10/2015', 0)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Gasolina', '3.26', '23/11/2015', 1)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Etanol', '2.95', '15/10/2015', 2)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Diesel', '3.56', '11/11/2015', 3)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Gasolina', '3.45', '23/10/2015', 4)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Gasolina', '3.42', '05/11/2015', 0)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Etanol', '3.01', '21/10/2015', 0)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Gasolina', '3.39', '15/11/2015', 0)");
-//      s.executeUpdate("INSERT INTO preco (tipo, valor, data, idposto) VALUES ("
-//        + "'Diesel', '3.53', '21/10/2015', 0)");
+        Class.forName(jdbc_driver);
+        Connection c = DriverManager.getConnection(db_url, db_user, db_passwd);
+        Statement s = c.createStatement();
       
-
-      ResultSet rs;
-      rs = s.executeQuery("SELECT * FROM posto");
-      while (rs.next())
-         lista.add(new Posto(rs.getInt("idposto"), rs.getString("cnpj"),
-         rs.getString("razaosocial"), rs.getString("nomefantasia"), 
-         rs.getString("bandeira"), rs.getString("endereco"), rs.getString("bairro"),
-         rs.getString("cep"), rs.getString("imagem"), rs.getString("maps")));
- 
-      s.execute("SHUTDOWN");
-      s.close();
-      c.close();
+        String str = "INSERT INTO "+tab_precos+"(tipo, valor, data, cnpj) VALUES ('"+tipo
+            +"', '"+valor+"', '"+data+"', '"+cnpj+"')";
       
-      return lista;
-   }
-   
-   public ArrayList getPrecos(int idposto) throws ClassNotFoundException, SQLException {
-      ArrayList lista = new ArrayList<Posto>();
+        s.executeUpdate(str);
+      
+        s.execute("SHUTDOWN");
+        s.close();
+        c.close();
+    }
+    
+    public void updateDB(ArrayList postos){
+        try {
+            deleteDados();
+            for(int i=0; i<postos.size(); i++){
+                Posto p = (Posto) postos.get(i);
+                insertPosto(p.getNomeFantasia(), p.getBandeira(), p.getRazaoSocial(), 
+                    p.getCnpj(), p.getEndereco(), p.getBairro(), p.getCep(), p.getImg());
+                ArrayList lisprecos = p.getValores();
+                for(int j=0; j<lisprecos.size(); j++){
+                    Preco q = (Preco) lisprecos.get(j);
+                    insertPreco(q.getTipo(), q.getValor(), q.getData(), p.getCnpj());
+                }
+                
+            }
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(JDBC.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public String getJdbc_driver() {
+        return jdbc_driver;
+    }
+
+    public void setJdbc_driver(String jdbc_driver) {
+        this.jdbc_driver = jdbc_driver;
+    }
+
+    public String getDb_name() {
+        return db_name;
+    }
+
+    public void setDb_name(String db_name) {
+        this.db_name = db_name;
+    }
+
+    public String getDb_preurl() {
+        return db_preurl;
+    }
+
+    public void setDb_preurl(String db_preurl) {
+        this.db_preurl = db_preurl;
+    }
+
+    public String getDb_url() {
+        return db_url;
+    }
+
+    public void setDb_url(String db_url) {
+        this.db_url = db_url;
+    }
+
+    public String getDb_user() {
+        return db_user;
+    }
+
+    public void setDb_user(String db_user) {
+        this.db_user = db_user;
+    }
+
+    public String getDb_passwd() {
+        return db_passwd;
+    }
+
+    public void setDb_passwd(String db_passwd) {
+        this.db_passwd = db_passwd;
+    }
+
+    public String getTab_postos() {
+        return tab_postos;
+    }
+
+    public void setTab_postos(String tab_postos) {
+        this.tab_postos = tab_postos;
+    }
+
+    public String getTab_precos() {
+        return tab_precos;
+    }
+
+    public void setTab_precos(String tab_precos) {
+        this.tab_precos = tab_precos;
+    }
+
+    public String[] getCol_postos() {
+        return col_postos;
+    }
+
+    public void setCol_postos(String[] col_postos) {
+        this.col_postos = col_postos;
+    }
+
+    public String[] getCol_precos() {
+        return col_precos;
+    }
+
+    public void setCol_precos(String[] col_precos) {
+        this.col_precos = col_precos;
+    }
        
-      Class.forName(JDBC_DRIVER);
-
-      Connection c = DriverManager.getConnection(db_url,
-                                                 DB_USER,
-                                                 DB_PASSWD);
-
-      Statement s = c.createStatement();
-      
-      ResultSet rs;
-      rs = s.executeQuery("SELECT * FROM preco WHERE idposto ="+idposto);
-      while (rs.next())
-         lista.add(new Preco(rs.getInt("idpreco"), rs.getString("tipo"),
-         Float.valueOf(rs.getString("valor")), rs.getString("data")));
- 
-      s.execute("SHUTDOWN");
-      s.close();
-      c.close();
-      
-      return lista;
-   }
 }
